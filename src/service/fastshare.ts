@@ -125,27 +125,32 @@ async function getPageSearchResults(
   const { document } = parseHTML(pageHtml);
   const items = document.querySelectorAll("html ul > li");
   const results = [...items]
-    .map((listEl) => {
+    .flatMap((listEl) => {
       const detailEl = listEl.querySelector(".video_detail");
+      if (!detailEl) {
+        return [];
+      }
       const linkEl = detailEl.querySelector("a");
       const sizeStr = detailEl.querySelector(".pull-right").innerHTML;
 
-      return {
-        resolverId: linkEl.getAttribute("href"),
-        title: linkEl.innerText,
-        detailPageUrl: linkEl.getAttribute("href"),
-        duration: timeToSeconds(
-          [...detailEl.querySelectorAll(".video_time")][0].innerText.trim(),
-        ),
-        format: [
-          ...detailEl.querySelectorAll(".video_time"),
-        ][1].innerText.trim(),
-        size: sizeToBytes(sizeStr),
-        playable: Boolean(listEl.querySelector(".playable")),
-        order: page ? "0" : "",
-      };
+      return [
+        {
+          resolverId: linkEl.getAttribute("href"),
+          title: linkEl.innerText,
+          detailPageUrl: linkEl.getAttribute("href"),
+          duration: timeToSeconds(
+            [...detailEl.querySelectorAll(".video_time")][0].innerText.trim(),
+          ),
+          format: [
+            ...detailEl.querySelectorAll(".video_time"),
+          ][1].innerText.trim(),
+          size: sizeToBytes(sizeStr),
+          playable: Boolean(listEl.querySelector(".playable")),
+          order: page ? "0" : "",
+        },
+      ];
     })
-    .filter((item) => item.playable);
+    .filter((item) => item?.playable);
 
   return results;
 }
@@ -160,9 +165,9 @@ export function getResolver(): Resolver {
        * This resolver works fine but the stream fails when you try to seek in the video.
        * It's disabled for now
        */
-      return false;
+      return true;
     },
-    validateConfig: async () => false,
+    validateConfig: async () => true,
     search: (title) => {
       return getSearchResults(title, fetchOptions);
     },
